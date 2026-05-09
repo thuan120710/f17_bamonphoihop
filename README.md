@@ -17,6 +17,14 @@ ensure F17_bamonphoihop
 /triathlon
 ```
 
+Nguoi dau tien dung command se mo lobby race chung. Nhung player khac dung `/triathlon` trong thoi gian cho de tham gia, sau do tat ca cung xuat phat.
+
+Xem bang xep hang:
+
+```txt
+/triathlontop
+```
+
 Co the trigger tu NPC/menu bang client event:
 
 ```lua
@@ -48,6 +56,9 @@ Route mac dinh di tu beach vao city, gameplay nhanh va co marker/blip route de f
 - Player phai tu leo len xe, script khong warp len xe.
 - Bike phase chi tinh checkpoint khi player dang ngoi tren xe dap rieng.
 - Ket thuc hoac resource stop se restore outfit cu.
+- Nhieu player co the vao cung mot lobby va xuat phat chung de dua top.
+- Server luu best time trong runtime va xep hang bang `/triathlontop`.
+- Race chung co thoi gian cho lobby va timeout tai `Config.SharedRaceJoinSeconds`, `Config.SharedRaceTimeoutMinutes`.
 
 ## Len production
 

@@ -2,6 +2,7 @@ Config = {}
 
 Config.Debug = false
 Config.Command = 'triathlon'
+Config.TopCommand = 'triathlontop'
 Config.StartEventName = 'f17_triathlon:start'
 Config.Locale = 'vi'
 
@@ -13,6 +14,11 @@ Config.CheckpointBlipScale = 0.85
 Config.RouteBlipScale = 0.7
 Config.CountdownSeconds = 3
 Config.CheckpointCooldownMs = 900
+Config.LeaderboardLimit = 10
+Config.SharedRaceJoinSeconds = 30
+Config.SharedRaceTimeoutMinutes = 15
+Config.StartGridColumns = 5
+Config.StartGridSpacing = 1.6
 
 Config.SportsOutfit = {
     male = {

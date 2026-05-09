@@ -289,14 +289,35 @@ local function passCheckpoint()
     end
 end
 
-local function startRace()
+local function getStartCoordsForSlot(slot)
+    local coords = Config.Phases.run.startCoords
+    local columns = Config.StartGridColumns or 5
+    local spacing = Config.StartGridSpacing or 1.6
+    local index = math.max((slot or 1) - 1, 0)
+    local column = index % columns
+    local row = math.floor(index / columns)
+    local heading = math.rad(coords.w)
+    local forward = vector3(-math.sin(heading), math.cos(heading), 0.0)
+    local right = vector3(math.cos(heading), math.sin(heading), 0.0)
+    local lateral = (column - ((columns - 1) / 2)) * spacing
+    local back = row * spacing * 1.5
+
+    return vector4(
+        coords.x + right.x * lateral - forward.x * back,
+        coords.y + right.y * lateral - forward.y * back,
+        coords.z,
+        coords.w
+    )
+end
+
+local function startRace(startSlot)
     if activeRace then
         notify('Ban dang tham gia minigame roi.')
         return
     end
 
     local ped = PlayerPedId()
-    local coords = Config.Phases.run.startCoords
+    local coords = getStartCoordsForSlot(startSlot)
 
     activeRace = true
     raceStart = GetGameTimer()
@@ -317,18 +338,31 @@ local function startRace()
     end
     FreezeEntityPosition(ped, false)
 
-    TriggerServerEvent('f17_triathlon:server:start')
     setPhase('run')
+end
+
+local function requestSharedRace()
+    if activeRace then
+        notify('Ban dang tham gia minigame roi.')
+        return
+    end
+
+    TriggerServerEvent('f17_triathlon:server:joinRace')
 end
 
 CreateThread(function()
     getFrameworks()
 end)
 
-RegisterNetEvent(Config.StartEventName, startRace)
+RegisterNetEvent(Config.StartEventName, requestSharedRace)
+RegisterNetEvent('f17_triathlon:client:startRace', startRace)
+RegisterNetEvent('f17_triathlon:client:notify', notify)
+RegisterNetEvent('f17_triathlon:client:forceCancel', function()
+    finishRace(true)
+end)
 
 RegisterCommand(Config.Command, function()
-    startRace()
+    requestSharedRace()
 end, false)
 
 RegisterCommand('triathlon_cancel', function()
