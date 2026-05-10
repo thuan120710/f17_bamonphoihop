@@ -8,6 +8,7 @@ local spawnedBike = nil
 local routeBlip = nil
 local checkpointBlip = nil
 local lastCheckpointAt = 0
+local raceSlot = 1
 
 local function notify(message)
     if ESX and ESX.ShowNotification then
@@ -199,6 +200,33 @@ local function loadModel(model)
     return HasModelLoaded(hash) and hash or nil
 end
 
+local function getGridCoords(coords, slot, columns, spacing)
+    local index = math.max((slot or 1) - 1, 0)
+    local column = index % columns
+    local row = math.floor(index / columns)
+    local heading = math.rad(coords.w)
+    local forward = vector3(-math.sin(heading), math.cos(heading), 0.0)
+    local right = vector3(math.cos(heading), math.sin(heading), 0.0)
+    local lateral = (column - ((columns - 1) / 2)) * spacing
+    local back = row * spacing * 1.5
+
+    return vector4(
+        coords.x + right.x * lateral - forward.x * back,
+        coords.y + right.y * lateral - forward.y * back,
+        coords.z,
+        coords.w
+    )
+end
+
+local function getBikeSpawnCoords()
+    local coords = Config.Phases.bike.spawnCoords
+    if not Config.Vehicle.useSpawnGrid then
+        return coords
+    end
+
+    return getGridCoords(coords, raceSlot, Config.BikeGridColumns or 5, Config.BikeGridSpacing or 2.4)
+end
+
 local function spawnBikeForPlayer()
     local model = loadModel(Config.Vehicle.model)
     if not model then
@@ -206,7 +234,7 @@ local function spawnBikeForPlayer()
         return
     end
 
-    local coords = Config.Phases.bike.spawnCoords
+    local coords = getBikeSpawnCoords()
     spawnedBike = CreateVehicle(model, coords.x, coords.y, coords.z, coords.w, true, true)
     SetEntityAsMissionEntity(spawnedBike, true, true)
     SetVehicleOnGroundProperly(spawnedBike)
@@ -291,23 +319,7 @@ end
 
 local function getStartCoordsForSlot(slot)
     local coords = Config.Phases.run.startCoords
-    local columns = Config.StartGridColumns or 5
-    local spacing = Config.StartGridSpacing or 1.6
-    local index = math.max((slot or 1) - 1, 0)
-    local column = index % columns
-    local row = math.floor(index / columns)
-    local heading = math.rad(coords.w)
-    local forward = vector3(-math.sin(heading), math.cos(heading), 0.0)
-    local right = vector3(math.cos(heading), math.sin(heading), 0.0)
-    local lateral = (column - ((columns - 1) / 2)) * spacing
-    local back = row * spacing * 1.5
-
-    return vector4(
-        coords.x + right.x * lateral - forward.x * back,
-        coords.y + right.y * lateral - forward.y * back,
-        coords.z,
-        coords.w
-    )
+    return getGridCoords(coords, slot, Config.StartGridColumns or 5, Config.StartGridSpacing or 1.6)
 end
 
 local function startRace(startSlot)
@@ -322,6 +334,7 @@ local function startRace(startSlot)
     activeRace = true
     raceStart = GetGameTimer()
     lastCheckpointAt = 0
+    raceSlot = startSlot or 1
     saveAndApplyOutfit()
 
     DoScreenFadeOut(450)

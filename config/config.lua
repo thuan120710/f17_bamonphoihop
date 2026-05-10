@@ -19,6 +19,8 @@ Config.SharedRaceJoinSeconds = 30
 Config.SharedRaceTimeoutMinutes = 15
 Config.StartGridColumns = 5
 Config.StartGridSpacing = 1.6
+Config.BikeGridColumns = 5
+Config.BikeGridSpacing = 2.4
 
 Config.SportsOutfit = {
     male = {
@@ -44,7 +46,8 @@ Config.SportsOutfit = {
 Config.Vehicle = {
     model = 'tribike3',
     lockUntilOwnerMounts = true,
-    cleanupSecondsAfterFinish = 0
+    cleanupSecondsAfterFinish = 0,
+    useSpawnGrid = true
 }
 
 Config.Phases = {
