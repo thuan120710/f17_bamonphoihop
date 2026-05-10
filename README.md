@@ -150,35 +150,35 @@ Tất cả tọa độ trong `config/config.lua`:
 - `Config.Phases.bike.markers`: Checkpoint đạp xe
 - `Config.Phases.bike.finish`: Điểm kết thúc cuối cùng
 
-## Tùy chỉnh Markers (Cột dọc)
+## Tùy chỉnh Markers (Cột dọc tròn)
 
-Markers được thiết kế dạng **cột dọc cao** (vertical cylinder) giống gameracing để dễ nhìn thấy từ xa:
+Markers được thiết kế dạng **cột dọc tròn cao** (vertical cylinder) giống gameracing để dễ nhìn thấy từ xa:
 
 ```lua
 Config.Marker = {
     run = {
         type = 4, -- Cylinder vertical (cột dọc)
-        size = vector3(5.0, 5.0, 150.0), -- width, depth, height (cột cao 150m)
-        color = { 255, 190, 45, 100 }, -- R, G, B, Alpha (màu vàng)
+        size = vector3(15.0, 0.1, 150.0), -- width, depth, height
+        color = { 255, 190, 45, 70 }, -- R, G, B, Alpha (màu vàng)
         zOffset = -1.0, -- Offset từ mặt đất
         reachDistance = 4.0 -- Khoảng cách để pass checkpoint
     },
     swim = {
         type = 4,
-        size = vector3(10.0, 10.0, 200.0), -- Cột cao 200m (dễ nhìn trong nước)
-        color = { 35, 170, 255, 100 }, -- Màu xanh dương
+        size = vector3(15.0, 0.1, 200.0), -- Cột cao 200m (dễ nhìn trong nước)
+        color = { 35, 170, 255, 70 }, -- Màu xanh dương
         -- ...
     },
     bike = {
         type = 4,
-        size = vector3(8.0, 8.0, 180.0), -- Cột cao 180m
-        color = { 80, 255, 145, 100 }, -- Màu xanh lá
+        size = vector3(15.0, 0.1, 180.0), -- Cột cao 180m
+        color = { 80, 255, 145, 70 }, -- Màu xanh lá
         -- ...
     },
     finish = {
         type = 4,
-        size = vector3(12.0, 12.0, 250.0), -- Cột cao nhất 250m (nổi bật)
-        color = { 255, 70, 70, 120 }, -- Màu đỏ
+        size = vector3(15.0, 0.1, 300.0), -- Cột cao nhất 300m (nổi bật)
+        color = { 255, 70, 70, 100 }, -- Màu đỏ
         -- ...
     }
 }
@@ -187,21 +187,27 @@ Config.Marker = {
 ### Giải thích Marker Settings:
 
 - **type = 4**: Cylinder vertical (cột dọc), giống gameracing
-- **size.x, size.y**: Đường kính cột (width/depth)
+- **size.x**: Đường kính cột (width) = 15.0
+- **size.y**: Độ sâu (depth) = **0.1** ← **BÍ QUYẾT TẠO CỘT TRÒN!**
+  - Depth rất mỏng (0.1) làm cột trông tròn thay vì vuông
+  - Giống gameracing sử dụng `15.0, 0.1, 300.0`
 - **size.z**: Chiều cao cột (height) - càng cao càng dễ nhìn từ xa
-- **color**: [R, G, B, Alpha] - Alpha thấp (100-120) để trong suốt, không che tầm nhìn
+- **color**: [R, G, B, Alpha] - Alpha thấp (70-100) để trong suốt, không che tầm nhìn
 - **zOffset**: Offset từ tọa độ checkpoint (thường -1.0 để bắt đầu từ dưới đất)
 - **reachDistance**: Khoảng cách để pass checkpoint
 
 ### So sánh với marker cũ:
 
-| Thuộc tính | Marker cũ (tròn) | Marker mới (cột dọc) |
-|------------|------------------|----------------------|
+| Thuộc tính | Marker cũ (tròn phẳng) | Marker mới (cột tròn cao) |
+|------------|------------------------|---------------------------|
 | Type | 1 (Cylinder) | 4 (Vertical Cylinder) |
-| Chiều cao | 1-2m | 150-250m |
+| Kích thước | 5x5x1m | 15x0.1x150-300m |
+| Depth | 5.0 (vuông) | **0.1 (tròn)** ← Quan trọng! |
+| Chiều cao | 1-2m | 150-300m |
 | Nhìn thấy từ xa | ❌ Khó | ✅ Dễ dàng |
+| Hình dạng | Vuông | **Tròn** (nhờ depth = 0.1) |
 | Giống gameracing | ❌ | ✅ |
-| Alpha | 190-220 (đậm) | 100-120 (trong suốt) |
+| Alpha | 190-220 (đậm) | 70-100 (trong suốt) |
 
 ## Luật gameplay
 

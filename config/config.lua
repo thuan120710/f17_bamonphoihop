@@ -115,7 +115,7 @@ Config.Rewards = {
     }
 }
 
--- Revive Function
+-- Revive Function (giống gameracing)
 Config.ReviveFunction = function()
     TriggerEvent('ambulance:client:Revive', {Admin = true})
 end

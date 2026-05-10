@@ -492,30 +492,48 @@ CreateThread(function()
                 end
             end
 
-            if IsEntityDead(ped) then
-                finishRace(true)
-            end
+            -- Đã xóa check IsEntityDead ở đây vì có thread auto-revive riêng
 
             Wait(wait)
         end
     end
 end)
 
--- Thread kiểm tra người chơi chết (học từ gameracing)
+-- Thread kiểm tra người chơi chết và auto-revive (giống gameracing)
 CreateThread(function()
     while true do
-        Wait(5000)
+        Wait(5000) -- Check mỗi 5 giây giống gameracing
         if activeRace and Config.AutoReviveOnDeath then
             local ped = PlayerPedId()
-            if LocalPlayer.state.isDead or IsEntityDead(ped) then
+            if LocalPlayer.state.isDead then
                 Wait(1000)
+                
                 local phase = Config.Phases[currentPhase]
-                if phase and currentIndex > 1 then
-                    local previousCheckpoint = phase.markers[currentIndex - 1] or phase.startCoords
+                if not phase then
+                    Wait(1000)
+                    goto continue
+                end
+                
+                -- Lấy checkpoint trước đó (giống gameracing)
+                local previousCheckpoint
+                if currentIndex > 1 then
+                    previousCheckpoint = phase.markers[currentIndex - 1]
+                else
+                    -- Checkpoint đầu tiên
+                    if currentPhase == 'run' then
+                        previousCheckpoint = phase.startCoords
+                    elseif currentPhase == 'swim' then
+                        previousCheckpoint = Config.Phases.run.finish
+                    elseif currentPhase == 'bike' then
+                        previousCheckpoint = Config.Phases.swim.finish
+                    end
+                end
+                
+                if previousCheckpoint then
                     SetEntityCoords(ped, previousCheckpoint.x, previousCheckpoint.y, previousCheckpoint.z)
                     Wait(500)
                     
-                    -- Kiểm tra nếu trong nước
+                    -- Kiểm tra nếu trong nước (giống gameracing)
                     local playerCoords = GetEntityCoords(ped)
                     if IsEntityInWater(ped) then
                         if playerCoords.z <= 0 then
@@ -526,10 +544,10 @@ CreateThread(function()
                     end
                     
                     Wait(500)
-                    if Config.ReviveFunction then
-                        Config.ReviveFunction()
-                    end
+                    Config.ReviveFunction()
                 end
+                
+                ::continue::
             end
         end
     end
