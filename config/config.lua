@@ -1,4 +1,5 @@
 Config = {}
+QBCore = exports["qb-core"]:GetCoreObject()
 
 Config.Debug = false
 Config.Command = 'triathlon'
@@ -6,13 +7,14 @@ Config.TopCommand = 'triathlontop'
 Config.StartEventName = 'f17_triathlon:start'
 Config.Locale = 'vi'
 
+-- Gameplay Settings
 Config.MaxGameplayMinutes = 10
 Config.MarkerDrawDistance = 650.0
 Config.MarkerReachDistance = 4.0
 Config.FinishReachDistance = 5.0
 Config.CheckpointBlipScale = 0.85
 Config.RouteBlipScale = 0.7
-Config.CountdownSeconds = 3
+Config.CountdownSeconds = 10
 Config.CheckpointCooldownMs = 900
 Config.LeaderboardLimit = 10
 Config.SharedRaceJoinSeconds = 30
@@ -21,6 +23,16 @@ Config.StartGridColumns = 5
 Config.StartGridSpacing = 1.6
 Config.BikeGridColumns = 5
 Config.BikeGridSpacing = 2.4
+
+-- Advanced Features (học từ gameracing)
+Config.UseRoutingBucket = true -- Tách người chơi vào dimension riêng
+Config.PassiveOnGame = true -- Ghost mode (chống va chạm)
+Config.EnableSound = true -- Bật âm thanh checkpoint
+Config.EnableEffects = true -- Hiệu ứng màn hình
+Config.AllowRespawn = true -- Cho phép quay lại checkpoint trước (phím Y)
+Config.RespawnCooldown = 2000 -- Cooldown giữa các lần respawn (ms)
+Config.AutoReviveOnDeath = true -- Tự động hồi sinh khi chết
+Config.TimeBeforeEnd = 100 -- Thời gian chờ người về đích đầu tiên (giây)
 
 Config.SportsOutfit = {
     male = {
@@ -47,7 +59,77 @@ Config.Vehicle = {
     model = 'tribike3',
     lockUntilOwnerMounts = true,
     cleanupSecondsAfterFinish = 0,
-    useSpawnGrid = true
+    useSpawnGrid = true,
+    checkValidVehicle = true, -- Kiểm tra xe hợp lệ
+    autoRepair = true -- Tự động sửa xe (xe đạp vẫn có thể hỏng)
+}
+
+-- Reward System (học từ gameracing)
+Config.Rewards = {
+    [1] = { -- Top 1
+        points = 20,
+        money = 10000,
+        moneyType = 'tienkhoa',
+        items = {
+            {name = 'vatphamhoatdong', amount = 10},
+            {name = 'homf17city', amount = 1}
+        },
+        xp = 20
+    },
+    [2] = { -- Top 2
+        points = 15,
+        money = 7500,
+        moneyType = 'tienkhoa',
+        items = {
+            {name = 'vatphamhoatdong', amount = 7},
+            {name = 'hopquamayrui', amount = 1}
+        },
+        xp = 15
+    },
+    [3] = { -- Top 3
+        points = 10,
+        money = 5000,
+        moneyType = 'tienkhoa',
+        items = {
+            {name = 'vatphamhoatdong', amount = 5}
+        },
+        xp = 10
+    },
+    [4] = { -- Top 4
+        points = 5,
+        money = 5000,
+        moneyType = 'tienkhoa',
+        items = {
+            {name = 'vatphamhoatdong', amount = 3}
+        },
+        xp = 10
+    },
+    [5] = { -- Top 5+
+        points = 0,
+        money = 2000,
+        moneyType = 'tienkhoa',
+        items = {
+            {name = 'vatphamhoatdong', amount = 1}
+        },
+        xp = 5
+    }
+}
+
+-- Revive Function
+Config.ReviveFunction = function()
+    TriggerEvent('ambulance:client:Revive', {Admin = true})
+end
+
+-- Language
+Config.Lang = {
+    title = 'TRIATHLON',
+    start = 'Triathlon sắp bắt đầu',
+    wait = 'Bạn đã tham gia, vui lòng chờ...',
+    accept = 'Từ chối tham gia Event',
+    notiwinner = 'Nhận được',
+    respawn = 'Nhấn [Y] để quay lại checkpoint trước',
+    wrongVehicle = 'Đây không phải xe của bạn!',
+    countdown = 'Sẵn sàng...'
 }
 
 Config.Phases = {
@@ -66,7 +148,7 @@ Config.Phases = {
         label = 'BOI',
         markers = { -- SWIM_MARKERS
             vector3(-1763.48, -1054.44, 0.59),
-            vector3(-1829.37, -974.52, 0.12),
+            vector3(-1853.34, -981.66, 0.59),
             vector3(-1905.76, -923.95, 0.05),
             vector3(-1983.78, -846.88, -0.66),
             vector3(-2127.57, -696.37, 0.06),
@@ -90,46 +172,50 @@ Config.Phases = {
     }
 }
 
+-- Marker Settings (Cột dọc cao giống gameracing)
+-- Type 4 = Vertical Cylinder (cột dọc từ dưới lên cao)
+-- Size.z = Chiều cao cột (150-250m để dễ nhìn từ xa)
+-- Alpha thấp (100-120) để trong suốt, không che tầm nhìn
 Config.Marker = {
     run = {
-        type = 1,
-        size = vector3(5.2, 5.2, 1.2),
-        color = { 255, 190, 45, 190 },
-        zOffset = -0.95,
+        type = 4, -- Cylinder vertical (cột dọc)
+        size = vector3(5.0, 5.0, 150.0), -- width, depth, height (cột cao 150m)
+        color = { 255, 190, 45, 100 }, -- Màu vàng, trong suốt hơn
+        zOffset = -1.0,
         reachDistance = 4.0,
         bobUpAndDown = false,
         faceCamera = false,
-        rotate = true
+        rotate = false
     },
     swim = {
-        type = 1,
-        size = vector3(10.0, 10.0, 2.0),
-        color = { 35, 170, 255, 205 },
-        zOffset = -1.15,
+        type = 4, -- Cylinder vertical
+        size = vector3(10.0, 10.0, 200.0), -- Cột cao 200m cho dễ nhìn trong nước
+        color = { 35, 170, 255, 100 }, -- Màu xanh dương
+        zOffset = -1.0,
         reachDistance = 6.5,
         bobUpAndDown = false,
         faceCamera = false,
-        rotate = true
+        rotate = false
     },
     bike = {
-        type = 1,
-        size = vector3(8.0, 8.0, 1.35),
-        color = { 80, 255, 145, 195 },
-        zOffset = -0.95,
+        type = 4, -- Cylinder vertical
+        size = vector3(8.0, 8.0, 180.0), -- Cột cao 180m
+        color = { 80, 255, 145, 100 }, -- Màu xanh lá
+        zOffset = -1.0,
         reachDistance = 6.0,
         bobUpAndDown = false,
         faceCamera = false,
-        rotate = true
+        rotate = false
     },
     finish = {
-        type = 1,
-        size = vector3(10.0, 10.0, 1.8),
-        color = { 255, 70, 70, 220 },
+        type = 4, -- Cylinder vertical
+        size = vector3(12.0, 12.0, 250.0), -- Cột cao nhất 250m
+        color = { 255, 70, 70, 120 }, -- Màu đỏ, nổi bật hơn
         zOffset = -1.0,
         reachDistance = 7.0,
         bobUpAndDown = false,
         faceCamera = false,
-        rotate = true
+        rotate = false
     }
 }
 

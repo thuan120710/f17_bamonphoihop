@@ -4,6 +4,8 @@ local bestTimes = {}
 local raceState = 'idle'
 local currentRaceId = 0
 local finishOrder = 0
+local nguoidangchoi = {} -- Theo dõi người chơi đang tham gia
+local tablessavetop = {} -- Lưu top để gửi webhook
 
 local function getPlayerKey(src)
     for _, identifier in ipairs(GetPlayerIdentifiers(src)) do
@@ -17,6 +19,69 @@ end
 
 local function getName(src)
     return GetPlayerName(src) or ('ID %s'):format(src)
+end
+
+-- Routing Bucket System (học từ gameracing)
+RegisterServerEvent('f17_triathlon:server:setRoutingBucket', function(dimension)
+    if not Config.UseRoutingBucket then return end
+    
+    local src = source
+    local xPlayer = QBCore.Functions.GetPlayer(src)
+    if not xPlayer then return end
+    
+    local veh = GetVehiclePedIsIn(GetPlayerPed(src), false)
+    
+    if veh ~= 0 then
+        SetEntityRoutingBucket(veh, dimension)
+        SetPlayerRoutingBucket(src, dimension)
+        TaskWarpPedIntoVehicle(GetPlayerPed(src), veh, -1)
+    else
+        SetPlayerRoutingBucket(src, dimension)
+    end
+end)
+
+-- Hàm thêm XP (tích hợp với f17_level)
+local function addXP(src, cid, xp)
+    if GetResourceState('f17_level') == 'started' then
+        exports['f17_level']:AddXP(src, xp)
+    end
+end
+
+-- Hàm phần thưởng theo top (học từ gameracing)
+local function giveReward(src, top)
+    local xPlayer = QBCore.Functions.GetPlayer(src)
+    if not xPlayer then return end
+    
+    local stt = math.min(math.max(tonumber(top), 1), 5)
+    local reward = Config.Rewards[stt]
+    if not reward then return end
+    
+    -- Thêm tiền
+    if reward.money and reward.money > 0 then
+        xPlayer.Functions.AddMoney(reward.moneyType or 'cash', reward.money, "Triathlon Top "..stt)
+    end
+    
+    -- Thêm items
+    if reward.items and GetResourceState('ox_inventory') == 'started' then
+        local ox = exports.ox_inventory
+        for _, item in ipairs(reward.items) do
+            if item.name and item.amount > 0 then
+                ox:AddItem(src, item.name, item.amount)
+            end
+        end
+    end
+    
+    -- Thêm XP
+    if reward.xp and reward.xp > 0 then
+        addXP(src, xPlayer.PlayerData.citizenid, reward.xp)
+    end
+    
+    -- Thông báo
+    if stt <= 5 then
+        TriggerClientEvent('QBCore:Notify', src, 
+            string.format('[Triathlon]: ~y~HANG %d~s~\nBan da nhan phan thuong tuong ung va cong: %d diem xep hang!', 
+            stt, reward.points or 0), 'success', 30000)
+    end
 end
 
 local function countTable(list)
@@ -205,6 +270,7 @@ local function joinSharedRace(src)
         currentRaceId = currentRaceId + 1
         raceState = 'waiting'
         finishOrder = 0
+        tablessavetop = {} -- Reset bảng top
         local raceId = currentRaceId
         broadcast(('Race #%d da mo lobby. Go /%s de tham gia trong %d giay.'):format(currentRaceId, Config.Command, Config.SharedRaceJoinSeconds or 30), { 80, 255, 145 })
 
@@ -213,9 +279,16 @@ local function joinSharedRace(src)
         end)
     end
 
+    local playerKey = getPlayerKey(src)
     waitingPlayers[src] = {
-        key = getPlayerKey(src),
+        key = playerKey,
         name = getName(src)
+    }
+    
+    -- Thêm vào danh sách đang chơi
+    nguoidangchoi[tonumber(src)] = {
+        cid = playerKey,
+        namePlayer = getName(src)
     }
 
     broadcast(('%s da tham gia lobby race #%d. Hien co %d nguoi.'):format(waitingPlayers[src].name, currentRaceId, countTable(waitingPlayers)), { 255, 190, 45 })
@@ -235,9 +308,16 @@ RegisterNetEvent('f17_triathlon:server:finish', function(elapsed, cancelled)
     if not session then return end
 
     activePlayers[src] = nil
+    nguoidangchoi[tonumber(src)] = nil
 
     if cancelled then
         broadcast(('%s da roi khoi race. Con %d nguoi dang thi dau.'):format(session.name, countTable(activePlayers)), { 255, 90, 90 })
+        
+        -- Xử phạt nếu thoát (tích hợp với f17_daotrentroi)
+        if GetResourceState('f17_daotrentroi') == 'started' then
+            exports['f17_daotrentroi']:HinhPhatMinigame(src, '[TRIATHLON]', 'thoat')
+        end
+        
         resetSharedRaceIfEmpty()
         return
     end
@@ -266,6 +346,14 @@ RegisterNetEvent('f17_triathlon:server:finish', function(elapsed, cancelled)
     local topText = bestRank and (' | BXH #%d'):format(bestRank) or ''
     local bestText = isPersonalBest and ' | PB moi' or ''
 
+    -- Lưu vào bảng top
+    tablessavetop[#tablessavetop + 1] = {
+        id = (QBCore.Functions.GetIdentifier(src, 'discord'):gsub("discord:", "") or 'undefined'),
+        top = finishOrder,
+        name = name,
+        time = formatMilliseconds(elapsed)
+    }
+
     broadcast(('%s ve dich #%d trong race #%d: %s%s%s. Con %d nguoi dang thi dau.'):format(
         name,
         finishOrder,
@@ -276,6 +364,19 @@ RegisterNetEvent('f17_triathlon:server:finish', function(elapsed, cancelled)
         countTable(activePlayers)
     ), { 255, 190, 45 })
 
+    -- Trao thưởng
+    giveReward(src, finishOrder)
+    
+    -- Cộng điểm vào hệ thống daotrentroi nếu có
+    if finishOrder <= 5 and GetResourceState('f17_daotrentroi') == 'started' then
+        local reward = Config.Rewards[finishOrder]
+        if reward and reward.points then
+            exports['f17_daotrentroi']:AddPointsMinigame(src, '[TRIATHLON]', reward.points, finishOrder)
+        end
+    elseif finishOrder > 5 and GetResourceState('f17_daotrentroi') == 'started' then
+        exports['f17_daotrentroi']:HinhPhatMinigame(src, '[TRIATHLON]', 'top', finishOrder)
+    end
+
     resetSharedRaceIfEmpty()
 end)
 
@@ -284,7 +385,38 @@ RegisterCommand(Config.TopCommand or 'triathlontop', function(src)
 end, false)
 
 AddEventHandler('playerDropped', function()
-    waitingPlayers[source] = nil
-    activePlayers[source] = nil
+    local src = source
+    waitingPlayers[src] = nil
+    activePlayers[src] = nil
+    nguoidangchoi[tonumber(src)] = nil
+    
+    -- Xử phạt nếu thoát giữa chừng
+    if activePlayers[src] and GetResourceState('f17_daotrentroi') == 'started' then
+        exports['f17_daotrentroi']:HinhPhatMinigame(src, '[TRIATHLON]', 'thoat')
+    end
+    
     resetSharedRaceIfEmpty()
 end)
+
+-- Export để start minigame từ bên ngoài (như gameracing)
+function StartMiniGame(data, labelMiniGame)
+    finishOrder = 0
+    currentRaceId = currentRaceId + 1
+    nguoidangchoi = {}
+    tablessavetop = {}
+    
+    local totalplayer = 0
+    for k, v in pairs(data) do
+        local Players = QBCore.Functions.GetPlayerByCitizenId(k)
+        if Players then
+            local src = Players.PlayerData.source
+            totalplayer = totalplayer + 1
+            notify(src, 'TRIATHLON sap bat dau')
+            TriggerClientEvent('f17_triathlon:client:startRace', src, totalplayer)
+        end
+    end
+    
+    print(('[F17 Triathlon] Started %s with %d players'):format(labelMiniGame or 'Triathlon', totalplayer))
+end
+
+exports('StartMiniGame', StartMiniGame)

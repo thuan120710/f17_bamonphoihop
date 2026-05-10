@@ -9,6 +9,10 @@ local routeBlip = nil
 local checkpointBlip = nil
 local lastCheckpointAt = 0
 local raceSlot = 1
+local lastRespawnAt = 0
+local isRaceEnding = false
+local finishOrder = 0
+local playerCheckpoint = 1
 
 local function notify(message)
     if ESX and ESX.ShowNotification then
@@ -277,11 +281,30 @@ local function finishRace(cancelled)
     clearBlips()
     restoreOutfit()
     cleanupBike(0)
+    
+    -- Tắt ghost mode
+    if Config.PassiveOnGame then
+        SetLocalPlayerAsGhost(false)
+    end
+    
+    -- Trả về routing bucket 0
+    if Config.UseRoutingBucket then
+        TriggerServerEvent('f17_triathlon:server:setRoutingBucket', 0)
+    end
 
     if cancelled then
         notify('Ban da huy minigame 3 mon phoi hop.')
         TriggerServerEvent('f17_triathlon:server:finish', elapsed, true)
         return
+    end
+
+    -- Hiệu ứng kết thúc
+    if Config.EnableEffects then
+        StartScreenEffect("MinigameEndFranklin", 0, 0)
+    end
+    
+    if Config.EnableSound then
+        PlaySoundFrontend(-1, 'CHECKPOINT_PERFECT', 'HUD_MINI_GAME_SOUNDSET', true)
     end
 
     notify(('Hoan thanh 3 mon phoi hop! Thoi gian: %s'):format(formatTime(elapsed)))
@@ -296,16 +319,27 @@ local function passCheckpoint()
     lastCheckpointAt = now
 
     local _, isFinish = getTarget()
+    
+    -- Hiệu ứng và âm thanh
+    if Config.EnableEffects then
+        StartScreenEffect("MinigameEndFranklin", 0, 0)
+    end
 
     if not isFinish then
         currentIndex = currentIndex + 1
+        playerCheckpoint = currentIndex
         local nextTarget, nextIsFinish = getTarget()
         addCheckpointBlip(nextTarget, currentPhase, nextIsFinish)
-        PlaySoundFrontend(-1, 'CHECKPOINT_NORMAL', 'HUD_MINI_GAME_SOUNDSET', true)
+        
+        if Config.EnableSound then
+            PlaySoundFrontend(-1, 'CHECKPOINT_NORMAL', 'HUD_MINI_GAME_SOUNDSET', true)
+        end
         return
     end
 
-    PlaySoundFrontend(-1, 'CHECKPOINT_PERFECT', 'HUD_MINI_GAME_SOUNDSET', true)
+    if Config.EnableSound then
+        PlaySoundFrontend(-1, 'CHECKPOINT_PERFECT', 'HUD_MINI_GAME_SOUNDSET', true)
+    end
 
     if currentPhase == 'run' then
         setPhase('swim')
@@ -335,7 +369,13 @@ local function startRace(startSlot)
     raceStart = GetGameTimer()
     lastCheckpointAt = 0
     raceSlot = startSlot or 1
+    playerCheckpoint = 1
     saveAndApplyOutfit()
+
+    -- Chuyển sang routing bucket riêng
+    if Config.UseRoutingBucket then
+        TriggerServerEvent('f17_triathlon:server:setRoutingBucket', 1)
+    end
 
     DoScreenFadeOut(450)
     Wait(550)
@@ -345,11 +385,24 @@ local function startRace(startSlot)
     DoScreenFadeIn(450)
 
     FreezeEntityPosition(ped, true)
+    
+    -- Countdown dài hơn như gameracing
     for i = Config.CountdownSeconds, 1, -1 do
-        notify(('San sang... %s'):format(i))
+        notify(('%s %s'):format(Config.Lang.countdown, i))
         Wait(1000)
     end
+    
     FreezeEntityPosition(ped, false)
+    
+    -- Bật ghost mode
+    if Config.PassiveOnGame then
+        SetLocalPlayerAsGhost(true)
+    end
+    
+    -- Hiệu ứng bắt đầu
+    if Config.EnableEffects then
+        StartScreenEffect("MinigameEndFranklin", 0, 0)
+    end
 
     setPhase('run')
 end
@@ -395,12 +448,14 @@ CreateThread(function()
             local markerConfig = isFinish and Config.Marker.finish or Config.Marker[currentPhase]
 
             if distance <= Config.MarkerDrawDistance then
+                -- Vẽ marker dạng cột dọc cao (giống gameracing)
+                -- Type 4 = cylinder vertical, vẽ từ dưới lên cao
                 DrawMarker(
                     markerConfig.type,
-                    target.x, target.y, target.z + (markerConfig.zOffset or -0.85),
-                    0.0, 0.0, 0.0,
-                    0.0, 0.0, 0.0,
-                    markerConfig.size.x, markerConfig.size.y, markerConfig.size.z,
+                    target.x, target.y, target.z + (markerConfig.zOffset or -1.0),
+                    0.0, 0.0, 0.0, -- Direction
+                    0.0, 0.0, 0.0, -- Rotation
+                    markerConfig.size.x, markerConfig.size.y, markerConfig.size.z, -- Scale (width, depth, height)
                     markerConfig.color[1], markerConfig.color[2], markerConfig.color[3], markerConfig.color[4],
                     markerConfig.bobUpAndDown or false,
                     markerConfig.faceCamera or false,
@@ -442,6 +497,112 @@ CreateThread(function()
             end
 
             Wait(wait)
+        end
+    end
+end)
+
+-- Thread kiểm tra người chơi chết (học từ gameracing)
+CreateThread(function()
+    while true do
+        Wait(5000)
+        if activeRace and Config.AutoReviveOnDeath then
+            local ped = PlayerPedId()
+            if LocalPlayer.state.isDead or IsEntityDead(ped) then
+                Wait(1000)
+                local phase = Config.Phases[currentPhase]
+                if phase and currentIndex > 1 then
+                    local previousCheckpoint = phase.markers[currentIndex - 1] or phase.startCoords
+                    SetEntityCoords(ped, previousCheckpoint.x, previousCheckpoint.y, previousCheckpoint.z)
+                    Wait(500)
+                    
+                    -- Kiểm tra nếu trong nước
+                    local playerCoords = GetEntityCoords(ped)
+                    if IsEntityInWater(ped) then
+                        if playerCoords.z <= 0 then
+                            SetEntityCoords(ped, playerCoords.x, playerCoords.y, 5.0)
+                        else
+                            SetEntityCoords(ped, playerCoords.x, playerCoords.y, playerCoords.z + 5)
+                        end
+                    end
+                    
+                    Wait(500)
+                    if Config.ReviveFunction then
+                        Config.ReviveFunction()
+                    end
+                end
+            end
+        end
+    end
+end)
+
+-- Thread kiểm tra xe không hợp lệ (học từ gameracing)
+CreateThread(function()
+    while true do
+        Wait(1000)
+        if activeRace and currentPhase == 'bike' and Config.Vehicle.checkValidVehicle then
+            local ped = PlayerPedId()
+            if IsPedSittingInAnyVehicle(ped) then
+                local playerVehicle = GetVehiclePedIsIn(ped, false)
+                if playerVehicle ~= spawnedBike then
+                    ClearPedTasksImmediately(ped)
+                    notify(Config.Lang.wrongVehicle or 'Day khong phai xe cua ban!')
+                end
+            end
+        end
+    end
+end)
+
+-- Thread tự động sửa xe đạp (học từ gameracing)
+CreateThread(function()
+    while true do
+        Wait(1000)
+        if activeRace and currentPhase == 'bike' and spawnedBike and DoesEntityExist(spawnedBike) then
+            local ped = PlayerPedId()
+            local playerVehicle = GetVehiclePedIsIn(ped, false)
+            
+            if playerVehicle == spawnedBike and Config.Vehicle.autoRepair then
+                SetVehicleBodyHealth(playerVehicle, 1000.0)
+                SetVehicleEngineHealth(playerVehicle, 1000.0)
+            end
+        end
+    end
+end)
+
+-- Thread respawn về checkpoint trước (phím Y) - học từ gameracing
+CreateThread(function()
+    while true do
+        Wait(100)
+        if activeRace and Config.AllowRespawn then
+            if IsControlPressed(0, 246) then -- Phím Y
+                local now = GetGameTimer()
+                if now - lastRespawnAt >= (Config.RespawnCooldown or 2000) then
+                    lastRespawnAt = now
+                    
+                    if currentIndex > 1 then
+                        local ped = PlayerPedId()
+                        local phase = Config.Phases[currentPhase]
+                        local previousCheckpoint = phase.markers[currentIndex - 1]
+                        
+                        if previousCheckpoint then
+                            -- Xóa xe nếu đang ở phase bike
+                            if currentPhase == 'bike' and spawnedBike then
+                                cleanupBike(0)
+                            end
+                            
+                            SetEntityCoords(ped, previousCheckpoint.x, previousCheckpoint.y, previousCheckpoint.z + 0.5)
+                            notify('Da quay lai checkpoint truoc')
+                            
+                            -- Spawn lại xe nếu cần
+                            if currentPhase == 'bike' then
+                                Wait(500)
+                                spawnBikeForPlayer()
+                            end
+                        end
+                    else
+                        notify('Ban dang o checkpoint dau tien!')
+                    end
+                end
+            end
         end
     end
 end)
