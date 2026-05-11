@@ -15,6 +15,8 @@ local lastRespawnAt = 0
 local isRaceEnding = false
 local finishOrder = 0
 local playerCheckpoint = 1
+local hasShownBikeHelp = false -- Flag để chỉ hiển thị thông báo 1 lần
+local hasShownWrongVehicleWarning = false -- Flag cho cảnh báo xe sai
 
 local function notify(message)
     if ESX and ESX.ShowNotification then
@@ -279,8 +281,10 @@ local function spawnBikeForPlayer()
         EndTextCommandSetBlipName(bikeBlip)
         
         isOnBike = false
-        notify('Xe dap da san sang. Hay leo len xe de tiep tuc!')
-    end, coords, true, true) -- true, true = networked, teleportInside
+        
+        -- KHÔNG tự động warp vào xe
+        notify('Xe dap da san sang! Hay di den xe va leo len de tiep tuc!')
+    end, coords, true, false) -- false = KHÔNG teleport vào xe
     
     SetModelAsNoLongerNeeded(model)
 end
@@ -540,11 +544,16 @@ CreateThread(function()
             if currentPhase == 'bike' and not isOnBike then
                 -- Chỉ hiển thị blip xe đạp, không hiển thị marker checkpoint
                 if spawnedBike and DoesEntityExist(spawnedBike) then
-                    drawHelp('Hay leo len xe dap cua ban de bat dau checkpoint bike!')
+                    -- Chỉ notify 1 lần duy nhất
+                    if not hasShownBikeHelp then
+                        notify('Hay leo len xe dap cua ban de bat dau checkpoint bike!')
+                        hasShownBikeHelp = true
+                    end
                     
                     -- Kiểm tra xem đã lên xe chưa
                     if IsPedInVehicle(ped, spawnedBike, false) then
                         isOnBike = true
+                        hasShownBikeHelp = false -- Reset flag
                         -- Xóa blip xe đạp khi đã lên xe
                         if bikeBlip and DoesBlipExist(bikeBlip) then
                             RemoveBlip(bikeBlip)
@@ -579,9 +588,17 @@ CreateThread(function()
 
                 if currentPhase == 'bike' then
                     if spawnedBike and DoesEntityExist(spawnedBike) and not IsPedInVehicle(ped, spawnedBike, false) then
-                        drawHelp('Len xe dap cua ban de tiep tuc checkpoint bike.')
+                        -- Không dùng drawHelp nữa, đã notify 1 lần ở trên
                     elseif IsPedInAnyVehicle(ped, false) and GetVehiclePedIsIn(ped, false) ~= spawnedBike then
-                        drawHelp('Ban phai dung xe dap rieng cua minh.')
+                        -- Chỉ notify khi ngồi xe khác, không loop
+                        if not hasShownWrongVehicleWarning then
+                            notify('Ban phai dung xe dap rieng cua minh.')
+                            hasShownWrongVehicleWarning = true
+                            CreateThread(function()
+                                Wait(3000)
+                                hasShownWrongVehicleWarning = false
+                            end)
+                        end
                     end
                 end
 
