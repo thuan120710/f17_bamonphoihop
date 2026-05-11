@@ -22,7 +22,7 @@ Config.SharedRaceTimeoutMinutes = 15
 Config.StartGridColumns = 5
 Config.StartGridSpacing = 1.6
 Config.BikeGridColumns = 5
-Config.BikeGridSpacing = 2.4
+Config.BikeGridSpacing = 5.0 -- Tăng từ 2.4 lên 5.0 để xe cách xa nhau
 
 -- Advanced Features (học từ gameracing)
 Config.UseRoutingBucket = true -- Tách người chơi vào dimension riêng

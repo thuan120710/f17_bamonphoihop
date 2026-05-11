@@ -5,6 +5,8 @@ local currentIndex = 1
 local raceStart = 0
 local oldSkin = nil
 local spawnedBike = nil
+local bikeBlip = nil -- Blip cho xe đạp
+local isOnBike = false -- Đã lên xe chưa
 local routeBlip = nil
 local checkpointBlip = nil
 local lastCheckpointAt = 0
@@ -186,8 +188,13 @@ local function setPhase(phaseName)
     currentPhase = phaseName
     currentIndex = 1
 
-    local target, isFinish = getTarget()
-    addCheckpointBlip(target, currentPhase, isFinish)
+    -- Chỉ tạo blip checkpoint nếu KHÔNG phải bike phase
+    -- Bike phase sẽ tạo blip sau khi lên xe
+    if phaseName ~= 'bike' then
+        local target, isFinish = getTarget()
+        addCheckpointBlip(target, currentPhase, isFinish)
+    end
+    
     notify(('Bat dau %s!'):format(Config.Phases[phaseName].label))
 end
 
@@ -239,19 +246,56 @@ local function spawnBikeForPlayer()
     end
 
     local coords = getBikeSpawnCoords()
-    spawnedBike = CreateVehicle(model, coords.x, coords.y, coords.z, coords.w, true, true)
-    SetEntityAsMissionEntity(spawnedBike, true, true)
-    SetVehicleOnGroundProperly(spawnedBike)
-    SetVehicleNumberPlateText(spawnedBike, ('F17%03d'):format(GetPlayerServerId(PlayerId()) % 1000))
-    SetVehicleDoorsLocked(spawnedBike, Config.Vehicle.lockUntilOwnerMounts and 1 or 0)
+    local plate = ('F17%03d'):format(GetPlayerServerId(PlayerId()) % 1000)
+    
+    -- Dùng QBCore.Functions.SpawnVehicle để xe được lưu vào database
+    QBCore.Functions.SpawnVehicle(Config.Vehicle.model, function(veh)
+        if not veh then 
+            notify('Loi spawn xe dap!')
+            return 
+        end
+        
+        spawnedBike = veh
+        
+        -- Set properties
+        SetVehicleNumberPlateText(spawnedBike, plate)
+        SetEntityHeading(spawnedBike, coords.w)
+        SetVehicleOnGroundProperly(spawnedBike)
+        SetVehicleEngineOn(spawnedBike, true, true)
+        SetVehicleDoorsLocked(spawnedBike, Config.Vehicle.lockUntilOwnerMounts and 1 or 0)
+        SetEntityAsMissionEntity(spawnedBike, true, true)
+        
+        -- Set ownership (quan trọng!)
+        TriggerEvent("vehiclekeys:client:SetOwner", plate)
+        
+        -- Tạo blip cho xe đạp
+        bikeBlip = AddBlipForEntity(spawnedBike)
+        SetBlipSprite(bikeBlip, 226) -- Bike icon
+        SetBlipColour(bikeBlip, 2) -- Green
+        SetBlipScale(bikeBlip, 1.0)
+        SetBlipAsShortRange(bikeBlip, false)
+        BeginTextCommandSetBlipName('STRING')
+        AddTextComponentString('Xe dap cua ban')
+        EndTextCommandSetBlipName(bikeBlip)
+        
+        isOnBike = false
+        notify('Xe dap da san sang. Hay leo len xe de tiep tuc!')
+    end, coords, true, true) -- true, true = networked, teleportInside
+    
     SetModelAsNoLongerNeeded(model)
-    notify('Xe dap da san sang. Hay tu leo len xe de tiep tuc!')
 end
 
 local function cleanupBike(delay)
     if not spawnedBike or not DoesEntityExist(spawnedBike) then return end
     local bike = spawnedBike
     spawnedBike = nil
+    isOnBike = false
+    
+    -- Xóa blip xe đạp
+    if bikeBlip and DoesBlipExist(bikeBlip) then
+        RemoveBlip(bikeBlip)
+        bikeBlip = nil
+    end
 
     CreateThread(function()
         Wait((delay or 0) * 1000)
@@ -281,6 +325,13 @@ local function finishRace(cancelled)
     clearBlips()
     restoreOutfit()
     cleanupBike(0)
+    isOnBike = false
+    
+    -- Xóa blip xe đạp nếu còn
+    if bikeBlip and DoesBlipExist(bikeBlip) then
+        RemoveBlip(bikeBlip)
+        bikeBlip = nil
+    end
     
     -- Tắt ghost mode
     if Config.PassiveOnGame then
@@ -443,58 +494,83 @@ CreateThread(function()
             local wait = 0
             local ped = PlayerPedId()
             local playerCoords = GetEntityCoords(ped)
-            local target, isFinish = getTarget()
-            local distance = #(playerCoords - target)
-            local markerConfig = isFinish and Config.Marker.finish or Config.Marker[currentPhase]
-
-            if distance <= Config.MarkerDrawDistance then
-                -- Vẽ marker dạng cột dọc cao (giống gameracing)
-                -- Type 4 = cylinder vertical, vẽ từ dưới lên cao
-                DrawMarker(
-                    markerConfig.type,
-                    target.x, target.y, target.z + (markerConfig.zOffset or -1.0),
-                    0.0, 0.0, 0.0, -- Direction
-                    0.0, 0.0, 0.0, -- Rotation
-                    markerConfig.size.x, markerConfig.size.y, markerConfig.size.z, -- Scale (width, depth, height)
-                    markerConfig.color[1], markerConfig.color[2], markerConfig.color[3], markerConfig.color[4],
-                    markerConfig.bobUpAndDown or false,
-                    markerConfig.faceCamera or false,
-                    2,
-                    markerConfig.rotate or false,
-                    nil, nil, false
-                )
+            
+            -- Kiểm tra nếu đang ở bike phase và chưa lên xe
+            if currentPhase == 'bike' and not isOnBike then
+                -- Chỉ hiển thị blip xe đạp, không hiển thị marker checkpoint
+                if spawnedBike and DoesEntityExist(spawnedBike) then
+                    drawHelp('Hay leo len xe dap cua ban de bat dau checkpoint bike!')
+                    
+                    -- Kiểm tra xem đã lên xe chưa
+                    if IsPedInVehicle(ped, spawnedBike, false) then
+                        isOnBike = true
+                        -- Xóa blip xe đạp khi đã lên xe
+                        if bikeBlip and DoesBlipExist(bikeBlip) then
+                            RemoveBlip(bikeBlip)
+                            bikeBlip = nil
+                        end
+                        -- Hiển thị checkpoint blip
+                        local target, isFinish = getTarget()
+                        addCheckpointBlip(target, currentPhase, isFinish)
+                        notify('Da len xe! Hay di den cac checkpoint!')
+                    end
+                end
+                Wait(100)
             else
-                wait = 150
-            end
+                -- Hiển thị marker bình thường cho run, swim, hoặc bike (đã lên xe)
+                local target, isFinish = getTarget()
+                local distance = #(playerCoords - target)
+                local markerConfig = isFinish and Config.Marker.finish or Config.Marker[currentPhase]
 
-            local phase = Config.Phases[currentPhase]
-            local total = #phase.markers + 1
-            local checkpoint = math.min(currentIndex, total)
-            local remaining = (Config.MaxGameplayMinutes * 60000) - (GetGameTimer() - raceStart)
-            drawText(0.982, 0.70, 0.48, ('F17 TRIATHLON | %s'):format(phase.label), true)
-            drawText(0.982, 0.735, 0.42, ('Checkpoint %d/%d | Timer %s'):format(checkpoint, total, formatTime(GetGameTimer() - raceStart)), true)
-            drawText(0.982, 0.765, 0.36, ('Target pace: %s'):format(formatTime(remaining)), true)
-
-            if currentPhase == 'bike' then
-                if spawnedBike and DoesEntityExist(spawnedBike) and not IsPedInVehicle(ped, spawnedBike, false) then
-                    drawHelp('Len xe dap cua ban de tiep tuc checkpoint bike.')
-                elseif IsPedInAnyVehicle(ped, false) and GetVehiclePedIsIn(ped, false) ~= spawnedBike then
-                    drawHelp('Ban phai dung xe dap rieng cua minh.')
+                if distance <= Config.MarkerDrawDistance then
+                    -- Vẽ marker dạng cột dọc cao (giống gameracing)
+                    -- Type 4 = cylinder vertical, vẽ từ dưới lên cao
+                    DrawMarker(
+                        markerConfig.type,
+                        target.x, target.y, target.z + (markerConfig.zOffset or -1.0),
+                        0.0, 0.0, 0.0, -- Direction
+                        0.0, 0.0, 0.0, -- Rotation
+                        markerConfig.size.x, markerConfig.size.y, markerConfig.size.z, -- Scale (width, depth, height)
+                        markerConfig.color[1], markerConfig.color[2], markerConfig.color[3], markerConfig.color[4],
+                        markerConfig.bobUpAndDown or false,
+                        markerConfig.faceCamera or false,
+                        2,
+                        markerConfig.rotate or false,
+                        nil, nil, false
+                    )
+                else
+                    wait = 150
                 end
-            end
 
-            local reachDistance = markerConfig.reachDistance or (isFinish and Config.FinishReachDistance or Config.MarkerReachDistance)
-            if distance <= reachDistance then
-                if currentPhase ~= 'bike' then
-                    passCheckpoint()
-                elseif spawnedBike and IsPedInVehicle(ped, spawnedBike, false) then
-                    passCheckpoint()
+                local phase = Config.Phases[currentPhase]
+                local total = #phase.markers + 1
+                local checkpoint = math.min(currentIndex, total)
+                local remaining = (Config.MaxGameplayMinutes * 60000) - (GetGameTimer() - raceStart)
+                drawText(0.982, 0.70, 0.48, ('F17 TRIATHLON | %s'):format(phase.label), true)
+                drawText(0.982, 0.735, 0.42, ('Checkpoint %d/%d | Timer %s'):format(checkpoint, total, formatTime(GetGameTimer() - raceStart)), true)
+                drawText(0.982, 0.765, 0.36, ('Target pace: %s'):format(formatTime(remaining)), true)
+
+                if currentPhase == 'bike' then
+                    if spawnedBike and DoesEntityExist(spawnedBike) and not IsPedInVehicle(ped, spawnedBike, false) then
+                        drawHelp('Len xe dap cua ban de tiep tuc checkpoint bike.')
+                    elseif IsPedInAnyVehicle(ped, false) and GetVehiclePedIsIn(ped, false) ~= spawnedBike then
+                        drawHelp('Ban phai dung xe dap rieng cua minh.')
+                    end
                 end
+
+                local reachDistance = markerConfig.reachDistance or (isFinish and Config.FinishReachDistance or Config.MarkerReachDistance)
+                if distance <= reachDistance then
+                    if currentPhase ~= 'bike' then
+                        passCheckpoint()
+                    elseif spawnedBike and IsPedInVehicle(ped, spawnedBike, false) then
+                        passCheckpoint()
+                    end
+                end
+
+                -- Đã xóa check IsEntityDead ở đây vì có thread auto-revive riêng
+
+                Wait(wait)
             end
-
-            -- Đã xóa check IsEntityDead ở đây vì có thread auto-revive riêng
-
-            Wait(wait)
         end
     end
 end)
@@ -533,7 +609,7 @@ CreateThread(function()
                     SetEntityCoords(ped, previousCheckpoint.x, previousCheckpoint.y, previousCheckpoint.z)
                     Wait(500)
                     
-                    -- Kiểm tra nếu trong nước (giống gameracing)
+                    -- Kiểm tra nếu trong nước 
                     local playerCoords = GetEntityCoords(ped)
                     if IsEntityInWater(ped) then
                         if playerCoords.z <= 0 then
@@ -553,7 +629,7 @@ CreateThread(function()
     end
 end)
 
--- Thread kiểm tra xe không hợp lệ (học từ gameracing)
+-- Thread kiểm tra xe không hợp lệ 
 CreateThread(function()
     while true do
         Wait(1000)
@@ -570,7 +646,7 @@ CreateThread(function()
     end
 end)
 
--- Thread tự động sửa xe đạp (học từ gameracing)
+-- Thread tự động sửa xe đạp 
 CreateThread(function()
     while true do
         Wait(1000)
@@ -586,7 +662,7 @@ CreateThread(function()
     end
 end)
 
--- Thread respawn về checkpoint trước (phím Y) - học từ gameracing
+-- Thread respawn về checkpoint trước (phím Y) 
 CreateThread(function()
     while true do
         Wait(100)
