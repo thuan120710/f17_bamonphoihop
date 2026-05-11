@@ -327,6 +327,11 @@ local function finishRace(cancelled)
     cleanupBike(0)
     isOnBike = false
     
+    -- Ẩn UI
+    SendNUIMessage({
+        action = 'hide'
+    })
+    
     -- Xóa blip xe đạp nếu còn
     if bikeBlip and DoesBlipExist(bikeBlip) then
         RemoveBlip(bikeBlip)
@@ -354,8 +359,13 @@ local function finishRace(cancelled)
         StartScreenEffect("MinigameEndFranklin", 0, 0)
     end
     
+    -- Âm thanh hoàn thành (giống gameracing)
     if Config.EnableSound then
-        PlaySoundFrontend(-1, 'CHECKPOINT_PERFECT', 'HUD_MINI_GAME_SOUNDSET', true)
+        SendNUIMessage({
+            transactionType = 'playSound',
+            transactionFile = 'rightchose',
+            transactionVolume = 0.5
+        })
     end
 
     notify(('Hoan thanh 3 mon phoi hop! Thoi gian: %s'):format(formatTime(elapsed)))
@@ -382,14 +392,24 @@ local function passCheckpoint()
         local nextTarget, nextIsFinish = getTarget()
         addCheckpointBlip(nextTarget, currentPhase, nextIsFinish)
         
+        -- Âm thanh checkpoint (giống gameracing)
         if Config.EnableSound then
-            PlaySoundFrontend(-1, 'CHECKPOINT_NORMAL', 'HUD_MINI_GAME_SOUNDSET', true)
+            SendNUIMessage({
+                transactionType = 'playSound',
+                transactionFile = 'rightchose',
+                transactionVolume = 0.5
+            })
         end
         return
     end
 
+    -- Âm thanh finish checkpoint
     if Config.EnableSound then
-        PlaySoundFrontend(-1, 'CHECKPOINT_PERFECT', 'HUD_MINI_GAME_SOUNDSET', true)
+        SendNUIMessage({
+            transactionType = 'playSound',
+            transactionFile = 'rightchose',
+            transactionVolume = 0.5
+        })
     end
 
     if currentPhase == 'run' then
@@ -437,11 +457,23 @@ local function startRace(startSlot)
 
     FreezeEntityPosition(ped, true)
     
-    -- Countdown dài hơn như gameracing
-    for i = Config.CountdownSeconds, 1, -1 do
-        notify(('%s %s'):format(Config.Lang.countdown, i))
-        Wait(1000)
+    -- Hiển thị countdown UI
+    SendNUIMessage({
+        action = 'countdown',
+        seconds = 5
+    })
+    
+    -- Phát âm thanh countdown 5 giây (giống gameracing)
+    if Config.EnableSound then
+        SendNUIMessage({
+            transactionType = 'playSound',
+            transactionFile = '5count',
+            transactionVolume = 0.5
+        })
     end
+    
+    -- Countdown 5 giây
+    Wait(5000)
     
     FreezeEntityPosition(ped, false)
     
@@ -456,6 +488,15 @@ local function startRace(startSlot)
     end
 
     setPhase('run')
+    
+    -- Hiển thị UI
+    SendNUIMessage({
+        action = 'show',
+        phase = 'run',
+        checkpoint = 0,
+        totalCheckpoints = #Config.Phases.run.markers + 1,
+        time = 0
+    })
 end
 
 local function requestSharedRace()
@@ -535,10 +576,6 @@ CreateThread(function()
                 local phase = Config.Phases[currentPhase]
                 local total = #phase.markers + 1
                 local checkpoint = math.min(currentIndex, total)
-                local remaining = (Config.MaxGameplayMinutes * 60000) - (GetGameTimer() - raceStart)
-                drawText(0.982, 0.70, 0.48, ('F17 TRIATHLON | %s'):format(phase.label), true)
-                drawText(0.982, 0.735, 0.42, ('Checkpoint %d/%d | Timer %s'):format(checkpoint, total, formatTime(GetGameTimer() - raceStart)), true)
-                drawText(0.982, 0.765, 0.36, ('Target pace: %s'):format(formatTime(remaining)), true)
 
                 if currentPhase == 'bike' then
                     if spawnedBike and DoesEntityExist(spawnedBike) and not IsPedInVehicle(ped, spawnedBike, false) then
@@ -615,6 +652,30 @@ CreateThread(function()
                 
                 ::continue::
             end
+        end
+    end
+end)
+
+-- Thread update UI realtime (giống gameracing)
+CreateThread(function()
+    while true do
+        Wait(100) -- Update mỗi 100ms
+        if activeRace and currentPhase then
+            local elapsed = GetGameTimer() - raceStart
+            local timeSeconds = math.floor(elapsed / 1000)
+            
+            -- Tính tổng checkpoint
+            local phase = Config.Phases[currentPhase]
+            local totalCheckpoints = phase and (#phase.markers + 1) or 0
+            
+            -- Gửi update UI
+            SendNUIMessage({
+                action = 'update',
+                phase = currentPhase,
+                checkpoint = currentIndex - 1,
+                totalCheckpoints = totalCheckpoints,
+                time = timeSeconds
+            })
         end
     end
 end)

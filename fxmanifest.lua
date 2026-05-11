@@ -19,6 +19,17 @@ server_scripts {
     'server/server.lua'
 }
 
+-- NUI (UI Vue.js)
+ui_page 'html/index.html'
+
+files {
+    'html/index.html',
+    'html/app.js',
+    'html/assets/*.css',
+    'html/assets/*.js',
+    'html/sounds/*.mp3'
+}
+
 -- Export để start từ bên ngoài
 server_exports {
     'StartMiniGame'
