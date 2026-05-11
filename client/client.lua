@@ -520,24 +520,14 @@ CreateThread(function()
                 -- Hiển thị marker bình thường cho run, swim, hoặc bike (đã lên xe)
                 local target, isFinish = getTarget()
                 local distance = #(playerCoords - target)
-                local markerConfig = isFinish and Config.Marker.finish or Config.Marker[currentPhase]
 
                 if distance <= Config.MarkerDrawDistance then
-                    -- Vẽ marker dạng cột dọc cao (giống gameracing)
+                    -- Lấy màu marker theo phase
+                    local markerColor = isFinish and Config.MarkerColors.finish or Config.MarkerColors[currentPhase]
+                    
+                    -- Vẽ marker dạng cột dọc cao (giống y hệt gameracing)
                     -- Type 4 = cylinder vertical, vẽ từ dưới lên cao
-                    DrawMarker(
-                        markerConfig.type,
-                        target.x, target.y, target.z + (markerConfig.zOffset or -1.0),
-                        0.0, 0.0, 0.0, -- Direction
-                        0.0, 0.0, 0.0, -- Rotation
-                        markerConfig.size.x, markerConfig.size.y, markerConfig.size.z, -- Scale (width, depth, height)
-                        markerConfig.color[1], markerConfig.color[2], markerConfig.color[3], markerConfig.color[4],
-                        markerConfig.bobUpAndDown or false,
-                        markerConfig.faceCamera or false,
-                        2,
-                        markerConfig.rotate or false,
-                        nil, nil, false
-                    )
+                    DrawMarker(4, target.x, target.y, target.z - 1, 0, 0, 0, 0, 0, 0, 15.0, 0.1, 300.0, markerColor[1], markerColor[2], markerColor[3], markerColor[4], false, true, 2, false, false, false, false)
                 else
                     wait = 150
                 end
@@ -558,8 +548,8 @@ CreateThread(function()
                     end
                 end
 
-                local reachDistance = markerConfig.reachDistance or (isFinish and Config.FinishReachDistance or Config.MarkerReachDistance)
-                if distance <= reachDistance then
+                -- Sử dụng MarkerDist giống gameracing
+                if distance <= Config.MarkerReachDistance then
                     if currentPhase ~= 'bike' then
                         passCheckpoint()
                     elseif spawnedBike and IsPedInVehicle(ped, spawnedBike, false) then

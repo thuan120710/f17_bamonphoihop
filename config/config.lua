@@ -9,9 +9,8 @@ Config.Locale = 'vi'
 
 -- Gameplay Settings
 Config.MaxGameplayMinutes = 10
-Config.MarkerDrawDistance = 650.0
-Config.MarkerReachDistance = 4.0
-Config.FinishReachDistance = 5.0
+Config.MarkerDrawDistance = 5000.0 -- Giống gameracing (vẽ marker khi < 5000m)
+Config.MarkerReachDistance = 7.0 -- Giống gameracing MarkerDist
 Config.CheckpointBlipScale = 0.85
 Config.RouteBlipScale = 0.7
 Config.CountdownSeconds = 10
@@ -172,51 +171,15 @@ Config.Phases = {
     }
 }
 
--- Marker Settings (Cột dọc cao giống gameracing)
+-- Marker Settings (Giống gameracing nhưng có màu riêng cho từng phase)
 -- Type 4 = Vertical Cylinder (cột dọc từ dưới lên cao)
--- Size.z = Chiều cao cột (150-250m để dễ nhìn từ xa)
--- Alpha thấp (100-120) để trong suốt, không che tầm nhìn
-Config.Marker = {
-    run = {
-        type = 4, -- Cylinder vertical (cột dọc)
-        size = vector3(5.0, 5.0, 150.0), -- width, depth, height (cột cao 150m)
-        color = { 255, 190, 45, 100 }, -- Màu vàng, trong suốt hơn
-        zOffset = -1.0,
-        reachDistance = 4.0,
-        bobUpAndDown = false,
-        faceCamera = false,
-        rotate = false
-    },
-    swim = {
-        type = 4, -- Cylinder vertical
-        size = vector3(10.0, 10.0, 200.0), -- Cột cao 200m cho dễ nhìn trong nước
-        color = { 35, 170, 255, 100 }, -- Màu xanh dương
-        zOffset = -1.0,
-        reachDistance = 6.5,
-        bobUpAndDown = false,
-        faceCamera = false,
-        rotate = false
-    },
-    bike = {
-        type = 4, -- Cylinder vertical
-        size = vector3(8.0, 8.0, 180.0), -- Cột cao 180m
-        color = { 80, 255, 145, 100 }, -- Màu xanh lá
-        zOffset = -1.0,
-        reachDistance = 6.0,
-        bobUpAndDown = false,
-        faceCamera = false,
-        rotate = false
-    },
-    finish = {
-        type = 4, -- Cylinder vertical
-        size = vector3(12.0, 12.0, 250.0), -- Cột cao nhất 250m
-        color = { 255, 70, 70, 120 }, -- Màu đỏ, nổi bật hơn
-        zOffset = -1.0,
-        reachDistance = 7.0,
-        bobUpAndDown = false,
-        faceCamera = false,
-        rotate = false
-    }
+-- Size: 15.0, 0.1, 300.0 (width, depth, height) - giống gameracing
+-- Chỉ khác màu sắc cho từng bộ môn
+Config.MarkerColors = {
+    run = { 255, 190, 45, 70 },      -- Màu vàng - Chạy bộ
+    swim = { 35, 170, 255, 70 },     -- Màu xanh dương - Bơi
+    bike = { 80, 255, 145, 70 },     -- Màu xanh lá - Đạp xe
+    finish = { 255, 70, 70, 100 }    -- Màu đỏ - Đích (nổi bật hơn)
 }
 
 Config.Blips = {
