@@ -58,7 +58,7 @@ local function giveReward(src, top)
     
     -- Thêm tiền
     if reward.money and reward.money > 0 then
-        xPlayer.Functions.AddMoney(reward.moneyType or 'cash', reward.money, "Triathlon Top "..stt)
+        xPlayer.Functions.AddMoney(reward.moneyType or 'tienkhoa', reward.money, "Triathlon Top "..stt)
     end
     
     -- Thêm items
