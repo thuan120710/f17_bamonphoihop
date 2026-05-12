@@ -132,42 +132,51 @@ Config.Lang = {
 }
 
 Config.Phases = {
+     swim = {
+        label = 'BOI',
+        startCoords = vector4(2393.03, 4284.78, 32.12, 92.36), -- SWIM_START_COORDS
+        markers = { -- SWIM_MARKERS
+            vector3(2315.54, 4283.88, 30.01),
+            vector3(2261.54, 4249.38, 30.29),
+            vector3(2198.99, 4160.97, 29.96),
+            vector3(2143.51, 4061.23, 29.46),
+        },
+        finish = vector3(2123.34, 3959.12, 29.26) -- SWIM_FINISH_MARKER
+    },
+        bike = {
+        label = 'DAP XE',
+        spawnCoords = vector4(2140.9, 3892.29, 33.18, 123.72), -- BIKE_SPAWN_COORDS
+        markers = { -- BIKE_MARKERS
+            vector3(2017.14, 3822.75, 32.31),
+            vector3(1932.35, 3709.37, 32.47),
+            vector3(1761.95, 3609.0, 34.79),
+            vector3(1659.4, 3493.63, 36.54),
+            vector3(1289.65, 3534.56, 35.29),
+            vector3(1116.17, 3505.16, 33.78),
+            vector3(1053.97, 3247.78, 37.82),
+            vector3(916.33, 3179.67, 38.4),
+            vector3(1012.38, 3030.35, 41.39),
+            vector3(1098.75, 2901.4, 38.09),
+            vector3(1133.15, 2763.25, 37.67),
+            vector3(1220.25, 2678.47, 37.65),
+            vector3(1391.56, 2692.8, 37.62),
+            vector3(1542.53, 2775.77, 38.13),
+            vector3(1793.82, 2929.29, 45.78),
+            vector3(1882.08, 3039.24, 45.35),
+            vector3(1884.37, 3183.15, 45.86),
+            vector3(1809.2, 3316.13, 42.25),
+            vector3(1734.62, 3449.69, 38.74),
+        },
+        finish = vector3(1663.97, 3568.79, 35.54), -- BIKE_FINISH_MARKER
+    },
     run = {
         label = 'CHAY BO',
-        startCoords = vector4(-1434.45, -1018.41, 5.06, 109.02), -- RUN_START_COORDS
         markers = { -- RUN_MARKERS
-            vector3(-1487.7, -1074.82, 3.74),
-            vector3(-1573.89, -1022.69, 7.68),
-            vector3(-1665.04, -963.27, 7.72),
-            vector3(-1720.06, -1013.88, 5.28),
+            vector3(1697.69, 3681.86, 34.76),
+            vector3(1697.69, 3681.86, 34.76),
+            vector3(1723.25, 3790.94, 34.76),
         },
-        finish = vector3(-1746.15, -1037.48, 1.72) -- RUN_FINISH_MARKER
-    },
-    swim = {
-        label = 'BOI',
-        markers = { -- SWIM_MARKERS
-            vector3(-1763.48, -1054.44, 0.59),
-            vector3(-1853.34, -981.66, 0.59),
-            vector3(-1905.76, -923.95, 0.05),
-            vector3(-1983.78, -846.88, -0.66),
-            vector3(-2127.57, -696.37, 0.06),
-            vector3(-2186.78, -594.48, -0.67)
-        },
-        finish = vector3(-2268.05, -477.05, 0.83) -- SWIM_FINISH_MARKER
-    },
-    bike = {
-        label = 'DAP XE',
-        spawnCoords = vector4(-2148.15, -377.07, 13.13, 64.31), -- BIKE_SPAWN_COORDS
-        markers = { -- BIKE_MARKERS
-            vector3(-2023.81, -186.44, 26.6),
-            vector3(-1802.85, -332.97, 43.64),
-            vector3(-1675.84, -579.31, 33.64),
-            vector3(-1542.53, -681.06, 28.73),
-            vector3(-1457.23, -776.07, 23.65),
-            vector3(-1600.91, -945.84, 13.18),
-            vector3(-1630.86, -997.47, 13.02),
-        },
-        finish = vector3(-1612.01, -1040.28, 13.15) -- FINAL_FINISH_COORDS
+        finish = vector3(1643.95, 3874.23, 34.29) -- RUN_FINISH_MARKER
     }
 }
 

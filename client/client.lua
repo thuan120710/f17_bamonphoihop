@@ -416,18 +416,19 @@ local function passCheckpoint()
         })
     end
 
-    if currentPhase == 'run' then
-        setPhase('swim')
-    elseif currentPhase == 'swim' then
+    if currentPhase == 'swim' then
         spawnBikeForPlayer()
         setPhase('bike')
     elseif currentPhase == 'bike' then
+        cleanupBike(0)
+        setPhase('run')
+    elseif currentPhase == 'run' then
         finishRace(false)
     end
 end
 
 local function getStartCoordsForSlot(slot)
-    local coords = Config.Phases.run.startCoords
+    local coords = Config.Phases.swim.startCoords
     return getGridCoords(coords, slot, Config.StartGridColumns or 5, Config.StartGridSpacing or 1.6)
 end
 
@@ -491,14 +492,14 @@ local function startRace(startSlot)
         StartScreenEffect("MinigameEndFranklin", 0, 0)
     end
 
-    setPhase('run')
+    setPhase('swim')
     
     -- Hiển thị UI
     SendNUIMessage({
         action = 'show',
-        phase = 'run',
+        phase = 'swim',
         checkpoint = 0,
-        totalCheckpoints = #Config.Phases.run.markers + 1,
+        totalCheckpoints = #Config.Phases.swim.markers + 1,
         time = 0
     })
 end
@@ -640,12 +641,12 @@ CreateThread(function()
                     previousCheckpoint = phase.markers[currentIndex - 1]
                 else
                     -- Checkpoint đầu tiên
-                    if currentPhase == 'run' then
+                    if currentPhase == 'swim' then
                         previousCheckpoint = phase.startCoords
-                    elseif currentPhase == 'swim' then
-                        previousCheckpoint = Config.Phases.run.finish
                     elseif currentPhase == 'bike' then
                         previousCheckpoint = Config.Phases.swim.finish
+                    elseif currentPhase == 'run' then
+                        previousCheckpoint = Config.Phases.bike.finish
                     end
                 end
                 
