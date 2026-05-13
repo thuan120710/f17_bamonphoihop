@@ -32,14 +32,14 @@ export default {
     TriathlonUI
   },
   setup() {
-    const isVisible = ref(false)
+    const isVisible = ref(false) // Bật mặc định cho dev
     const showCountdown = ref(false)
     const countdownNumber = ref(5)
     const phaseName = ref('CHẠY BỘ')
     const phaseIcon = ref('🏃')
-    const currentCheckpoint = ref(0)
-    const totalCheckpoints = ref(0)
-    const timeSeconds = ref(0)
+    const currentCheckpoint = ref(2)
+    const totalCheckpoints = ref(5)
+    const timeSeconds = ref(71) // 01:11
 
     const phaseConfig = {
       'run': { name: 'CHẠY BỘ', icon: '🏃' },
@@ -119,6 +119,7 @@ export default {
     onMounted(() => {
       window.addEventListener('message', handleMessage)
       console.log('F17 Triathlon UI - Vue 3 SFC Loaded')
+      
     })
 
     return {

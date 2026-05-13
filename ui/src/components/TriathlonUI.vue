@@ -1,33 +1,43 @@
 <template>
   <div class="triathlon-ui">
-    <!-- Phase Info -->
-    <div class="phase-info">
-      <div class="phase-name">{{ phaseName }}</div>
-      <div class="phase-icon">{{ phaseIcon }}</div>
+    <!-- Hàng 1: Thông tin chính -->
+    <div class="main-row">
+      <!-- Left: Phase Info -->
+      <div class="phase-section">
+        <div class="phase-icon">{{ phaseIcon }}</div>
+        <div class="phase-name">{{ phaseName }}</div>
+      </div>
+
+      <!-- Center: Progress Info -->
+      <div class="progress-section">
+        <div class="stat-item">
+          <span class="stat-label">CHECKPOINT</span>
+          <span class="stat-value">{{ currentCheckpoint }}/{{ totalCheckpoints }}</span>
+        </div>
+        <div class="stat-divider"></div>
+        <div class="stat-item">
+          <span class="stat-label">THỜI GIAN</span>
+          <span class="stat-value">{{ formattedTime }}</span>
+        </div>
+        <div class="stat-divider"></div>
+        <div class="stat-item" :class="{ 'warning': remainingSeconds < 120 }">
+          <span class="stat-label">CÒN LẠI</span>
+          <span class="stat-value">{{ formattedRemaining }}</span>
+        </div>
+      </div>
     </div>
 
-    <!-- Progress Info -->
-    <div class="progress-info">
-      <div class="checkpoint-text">
-        Checkpoint <span class="highlight">{{ currentCheckpoint }}</span>/<span class="highlight">{{ totalCheckpoints }}</span>
+    <!-- Hàng 2: Controls -->
+    <div class="controls-row">
+      <div class="control-hint">
+        <kbd>Y</kbd>
+        <span>Quay lại checkpoint</span>
       </div>
-      <div class="timer-text">
-        Thời gian <span class="highlight">{{ formattedTime }}</span>
+      <div class="control-divider">|</div>
+      <div class="control-hint">
+        <kbd>/triathlon_cancel</kbd>
+        <span>Thoát minigame</span>
       </div>
-      <div class="remaining-text" :class="{ 'warning': remainingSeconds < 120 }">
-        Còn lại <span class="highlight-remaining">{{ formattedRemaining }}</span>
-      </div>
-    </div>
-
-    <!-- Controls Info -->
-    <div class="controls-info">
-      <span class="control-item">
-        <kbd>Y</kbd> Quay lại checkpoint
-      </span>
-      <span class="divider">|</span>
-      <span class="control-item">
-        <kbd>/triathlon_cancel</kbd> Thoát
-      </span>
     </div>
   </div>
 </template>
@@ -91,60 +101,88 @@ export default {
 
 <style scoped>
 .triathlon-ui {
-  background: linear-gradient(135deg, rgba(58, 57, 60, 0.95) 0%, rgba(45, 44, 47, 0.95) 100%);
-  border-radius: 12px;
-  padding: 20px 30px;
-  min-width: 450px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
-  border: 2px solid rgba(255, 190, 45, 0.3);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
-/* Phase Info */
-.phase-info {
+/* Hàng 1: Main Row */
+.main-row {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  margin-bottom: 15px;
-  padding-bottom: 15px;
-  border-bottom: 2px solid rgba(255, 190, 45, 0.2);
+  gap: 25px;
+  background: linear-gradient(135deg, rgba(58, 57, 60, 0.85) 0%, rgba(45, 44, 47, 0.85) 100%);
+  border-radius: 10px;
+  padding: 12px 25px;
+  border: 2px solid rgba(255, 190, 45, 0.4);
+}
+
+/* Phase Section (Left) */
+.phase-section {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-right: 25px;
+  border-right: 2px solid rgba(255, 190, 45, 0.3);
+}
+
+.phase-icon {
+  font-size: 36px;
+  filter: drop-shadow(0 2px 4px rgba(255, 215, 0, 0.3));
+  line-height: 1;
 }
 
 .phase-name {
-  font-size: 24px;
+  font-size: 20px;
   font-weight: 700;
   color: #FFD700;
   text-transform: uppercase;
   letter-spacing: 1px;
   text-shadow: 0 2px 8px rgba(255, 215, 0, 0.4);
+  white-space: nowrap;
 }
 
-.phase-icon {
-  font-size: 32px;
-  filter: drop-shadow(0 2px 4px rgba(255, 215, 0, 0.3));
+/* Progress Section (Center) */
+.progress-section {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  flex: 1;
 }
 
-/* Progress Info */
-.progress-info {
-  margin-bottom: 15px;
-}
-
-.checkpoint-text,
-.timer-text,
-.remaining-text {
-  font-size: 18px;
-  color: #ffffff;
-  margin-bottom: 8px;
-  font-weight: 500;
-}
-
-.remaining-text {
-  font-size: 16px;
+.stat-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
   transition: all 0.3s ease;
 }
 
-.remaining-text.warning {
+.stat-label {
+  font-size: 10px;
+  color: #aaaaaa;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 500;
+}
+
+.stat-value {
+  font-size: 20px;
+  font-weight: 700;
+  color: #FFD700;
+  text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+  font-family: 'Roboto Mono', monospace;
+}
+
+.stat-item.warning .stat-value {
   color: #ff6b6b;
+  text-shadow: 0 0 10px rgba(255, 107, 107, 0.5);
   animation: warningPulse 1s ease-in-out infinite;
+}
+
+.stat-divider {
+  width: 1px;
+  height: 35px;
+  background: rgba(255, 190, 45, 0.2);
 }
 
 @keyframes warningPulse {
@@ -156,39 +194,30 @@ export default {
   }
 }
 
-.highlight {
-  color: #FFD700;
-  font-weight: 700;
-  text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
-}
-
-.highlight-remaining {
-  color: #4CAF50;
-  font-weight: 700;
-  text-shadow: 0 0 10px rgba(76, 175, 80, 0.5);
-}
-
-.warning .highlight-remaining {
-  color: #ff6b6b;
-  text-shadow: 0 0 10px rgba(255, 107, 107, 0.5);
-}
-
-/* Controls Info */
-.controls-info {
+/* Hàng 2: Controls Row */
+.controls-row {
   display: flex;
-  align-items: center;
   justify-content: center;
+  align-items: center;
   gap: 15px;
-  padding-top: 15px;
-  border-top: 2px solid rgba(255, 190, 45, 0.2);
-  font-size: 14px;
-  color: #cccccc;
+  background: linear-gradient(135deg, rgba(58, 57, 60, 0.75) 0%, rgba(45, 44, 47, 0.75) 100%);
+  border-radius: 8px;
+  padding: 8px 20px;
+  border: 1px solid rgba(255, 190, 45, 0.25);
 }
 
-.control-item {
+.control-hint {
   display: flex;
   align-items: center;
   gap: 8px;
+  font-size: 12px;
+  color: #cccccc;
+}
+
+.control-divider {
+  color: rgba(255, 190, 45, 0.4);
+  font-size: 14px;
+  font-weight: 300;
 }
 
 kbd {
@@ -196,44 +225,69 @@ kbd {
   color: #1a1a1a;
   padding: 4px 10px;
   border-radius: 6px;
-  font-family: 'Roboto', monospace;
+  font-family: 'Roboto Mono', monospace;
   font-weight: 700;
-  font-size: 13px;
+  font-size: 11px;
   box-shadow: 0 2px 8px rgba(255, 215, 0, 0.4);
   border: 1px solid rgba(255, 215, 0, 0.6);
-}
-
-.divider {
-  color: rgba(255, 190, 45, 0.5);
-  font-weight: 300;
+  min-width: 24px;
+  text-align: center;
 }
 
 /* Responsive */
-@media (max-width: 768px) {
-  .triathlon-ui {
-    min-width: 90%;
-    padding: 15px 20px;
+@media (max-width: 1024px) {
+  .main-row {
+    gap: 15px;
+    padding: 10px 20px;
   }
 
-  .phase-name {
-    font-size: 20px;
+  .phase-section {
+    padding-right: 15px;
   }
 
   .phase-icon {
-    font-size: 28px;
+    font-size: 30px;
   }
 
-  .checkpoint-text,
-  .timer-text {
-    font-size: 16px;
+  .phase-name {
+    font-size: 18px;
   }
 
-  .controls-info {
+  .stat-value {
+    font-size: 18px;
+  }
+}
+
+@media (max-width: 768px) {
+  .main-row {
+    flex-wrap: wrap;
+    gap: 10px;
+    padding: 10px 15px;
+  }
+
+  .phase-section {
+    border: none;
+    padding: 0;
+  }
+
+  .progress-section {
+    width: 100%;
+    justify-content: space-around;
+    padding-top: 10px;
+    border-top: 2px solid rgba(255, 190, 45, 0.3);
+  }
+
+  .stat-divider {
+    height: 30px;
+  }
+
+  .controls-row {
     flex-direction: column;
     gap: 8px;
+    padding: 6px 15px;
   }
 
-  .divider {
+  .control-divider {
     display: none;
   }
 }
