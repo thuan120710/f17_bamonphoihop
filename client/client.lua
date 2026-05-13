@@ -736,61 +736,62 @@ CreateThread(function()
     end
 end)
 
--- Thread kiểm tra xe không hợp lệ 
+-- Thread quản lý bike (gộp tất cả logic bike vào 1 thread)
 CreateThread(function()
+    local lastBikeCheck = 0
+    local lastRepairCheck = 0
+    
     while true do
-        Wait(1000)
-        if activeRace and currentPhase == 'bike' and Config.Vehicle.checkValidVehicle then
+        local wait = 500
+        local now = GetGameTimer()
+        
+        if activeRace and spawnedBike and DoesEntityExist(spawnedBike) then
             local ped = PlayerPedId()
-            if IsPedSittingInAnyVehicle(ped) then
-                local playerVehicle = GetVehiclePedIsIn(ped, false)
-                if playerVehicle ~= spawnedBike then
-                    ClearPedTasksImmediately(ped)
-                    notify(Config.Lang.wrongVehicle or 'Day khong phai xe cua ban!')
+            
+            -- 1. Kiểm tra xe không hợp lệ (mỗi 1 giây)
+            if currentPhase == 'bike' and Config.Vehicle.checkValidVehicle and (now - lastBikeCheck >= 1000) then
+                lastBikeCheck = now
+                if IsPedSittingInAnyVehicle(ped) then
+                    local playerVehicle = GetVehiclePedIsIn(ped, false)
+                    if playerVehicle ~= spawnedBike then
+                        ClearPedTasksImmediately(ped)
+                        notify(Config.Lang.wrongVehicle or 'Day khong phai xe cua ban!')
+                    end
                 end
             end
-        end
-    end
-end)
-
--- Thread tự động sửa xe đạp 
-CreateThread(function()
-    while true do
-        Wait(1000)
-        if activeRace and currentPhase == 'bike' and spawnedBike and DoesEntityExist(spawnedBike) then
-            local ped = PlayerPedId()
-            local playerVehicle = GetVehiclePedIsIn(ped, false)
             
-            if playerVehicle == spawnedBike and Config.Vehicle.autoRepair then
-                SetVehicleBodyHealth(playerVehicle, 1000.0)
-                SetVehicleEngineHealth(playerVehicle, 1000.0)
+            -- 2. Tự động sửa xe (mỗi 1 giây)
+            if currentPhase == 'bike' and Config.Vehicle.autoRepair and (now - lastRepairCheck >= 1000) then
+                lastRepairCheck = now
+                local playerVehicle = GetVehiclePedIsIn(ped, false)
+                if playerVehicle == spawnedBike then
+                    SetVehicleBodyHealth(playerVehicle, 1000.0)
+                    SetVehicleEngineHealth(playerVehicle, 1000.0)
+                end
             end
-        end
-    end
-end)
-
--- Thread ngăn chặn lên xe lại sau khi hoàn thành bike phase
-CreateThread(function()
-    while true do
-        Wait(100)
-        if activeRace and bikePhaseCompleted and spawnedBike and DoesEntityExist(spawnedBike) then
-            local ped = PlayerPedId()
             
-            -- Kiểm tra nếu đang cố lên xe
-            if IsPedGettingIntoAVehicle(ped) then
-                local targetVehicle = GetVehiclePedIsTryingToEnter(ped)
-                if targetVehicle == spawnedBike then
-                    ClearPedTasksImmediately(ped)
+            -- 3. Ngăn chặn lên xe lại sau khi hoàn thành bike phase (check nhanh 100ms)
+            if bikePhaseCompleted then
+                wait = 100
+                
+                -- Kiểm tra đang cố lên xe
+                if IsPedGettingIntoAVehicle(ped) then
+                    local targetVehicle = GetVehiclePedIsTryingToEnter(ped)
+                    if targetVehicle == spawnedBike then
+                        ClearPedTasksImmediately(ped)
+                        notify('Ban khong the su dung xe dap nua! Hay chay bo den dich!')
+                    end
+                end
+                
+                -- Kiểm tra đã ngồi trên xe (bypass)
+                if IsPedInVehicle(ped, spawnedBike, false) then
+                    TaskLeaveVehicle(ped, spawnedBike, 16)
                     notify('Ban khong the su dung xe dap nua! Hay chay bo den dich!')
                 end
             end
-            
-            -- Kiểm tra nếu đã ngồi trên xe (trường hợp bypass)
-            if IsPedInVehicle(ped, spawnedBike, false) then
-                TaskLeaveVehicle(ped, spawnedBike, 16) -- Flag 16 = leave immediately
-                notify('Ban khong the su dung xe dap nua! Hay chay bo den dich!')
-            end
         end
+        
+        Wait(wait)
     end
 end)
 
