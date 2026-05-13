@@ -17,6 +17,7 @@ local finishOrder = 0
 local playerCheckpoint = 1
 local hasShownBikeHelp = false -- Flag để chỉ hiển thị thông báo 1 lần
 local hasShownWrongVehicleWarning = false -- Flag cho cảnh báo xe sai
+local bikePhaseCompleted = false -- Flag đánh dấu đã hoàn thành phase bike
 
 local function notify(message)
     if ESX and ESX.ShowNotification then
@@ -326,6 +327,7 @@ local function finishRace(cancelled)
     local elapsed = GetGameTimer() - raceStart
     activeRace = false
     currentPhase = nil
+    bikePhaseCompleted = false
     clearBlips()
     restoreOutfit()
     cleanupBike(0)
@@ -420,8 +422,43 @@ local function passCheckpoint()
         spawnBikeForPlayer()
         setPhase('bike')
     elseif currentPhase == 'bike' then
-        cleanupBike(0)
-        setPhase('run')
+        -- Giảm tốc độ xe từ từ và tự động xuống xe
+        CreateThread(function()
+            local ped = PlayerPedId()
+            if spawnedBike and DoesEntityExist(spawnedBike) and IsPedInVehicle(ped, spawnedBike, false) then
+                -- Giảm tốc độ từ từ
+                local currentSpeed = GetEntitySpeed(spawnedBike)
+                local steps = 20 -- Số bước giảm tốc
+                local speedDecrement = currentSpeed / steps
+                
+                for i = 1, steps do
+                    if DoesEntityExist(spawnedBike) then
+                        local newSpeed = math.max(0, currentSpeed - (speedDecrement * i))
+                        SetVehicleForwardSpeed(spawnedBike, newSpeed)
+                        Wait(50) -- Giảm tốc trong 1 giây (20 steps * 50ms)
+                    end
+                end
+                
+                -- Dừng hẳn xe
+                SetVehicleForwardSpeed(spawnedBike, 0.0)
+                Wait(300)
+                
+                -- Tự động xuống xe
+                TaskLeaveVehicle(ped, spawnedBike, 0)
+                Wait(1500) -- Chờ animation xuống xe
+                
+                -- Đánh dấu đã hoàn thành phase bike
+                bikePhaseCompleted = true
+                isOnBike = false
+                
+                -- Chuyển sang phase chạy bộ (KHÔNG xóa xe ở đây)
+                setPhase('run')
+            else
+                -- Nếu không trên xe thì chuyển phase luôn
+                bikePhaseCompleted = true
+                setPhase('run')
+            end
+        end)
     elseif currentPhase == 'run' then
         finishRace(false)
     end
@@ -446,6 +483,7 @@ local function startRace(startSlot)
     lastCheckpointAt = 0
     raceSlot = startSlot or 1
     playerCheckpoint = 1
+    bikePhaseCompleted = false
     saveAndApplyOutfit()
 
     -- Chuyển sang routing bucket riêng
@@ -726,6 +764,31 @@ CreateThread(function()
             if playerVehicle == spawnedBike and Config.Vehicle.autoRepair then
                 SetVehicleBodyHealth(playerVehicle, 1000.0)
                 SetVehicleEngineHealth(playerVehicle, 1000.0)
+            end
+        end
+    end
+end)
+
+-- Thread ngăn chặn lên xe lại sau khi hoàn thành bike phase
+CreateThread(function()
+    while true do
+        Wait(100)
+        if activeRace and bikePhaseCompleted and spawnedBike and DoesEntityExist(spawnedBike) then
+            local ped = PlayerPedId()
+            
+            -- Kiểm tra nếu đang cố lên xe
+            if IsPedGettingIntoAVehicle(ped) then
+                local targetVehicle = GetVehiclePedIsTryingToEnter(ped)
+                if targetVehicle == spawnedBike then
+                    ClearPedTasksImmediately(ped)
+                    notify('Ban khong the su dung xe dap nua! Hay chay bo den dich!')
+                end
+            end
+            
+            -- Kiểm tra nếu đã ngồi trên xe (trường hợp bypass)
+            if IsPedInVehicle(ped, spawnedBike, false) then
+                TaskLeaveVehicle(ped, spawnedBike, 16) -- Flag 16 = leave immediately
+                notify('Ban khong the su dung xe dap nua! Hay chay bo den dich!')
             end
         end
     end

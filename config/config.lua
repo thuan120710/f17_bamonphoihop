@@ -55,7 +55,7 @@ Config.SportsOutfit = {
 }
 
 Config.Vehicle = {
-    model = 'tribike3',
+    model = 'bmx',
     lockUntilOwnerMounts = true,
     cleanupSecondsAfterFinish = 0,
     useSpawnGrid = true,
