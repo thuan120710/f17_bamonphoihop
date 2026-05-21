@@ -709,7 +709,7 @@ RegisterNetEvent('f17_bamonphoihop:cl:Restart', function(silent)
 end)
 
 RegisterNetEvent(Config.StartEventName, function()
-    TriggerServerEvent('f17_bamonphoihop:sv:StartSolo')
+    TriggerServerEvent('f17_bamonphoihop:sv:JoinLobby')
 end)
 
 RegisterNetEvent('f17_triathlon:client:startRace', function(slot)
@@ -723,7 +723,7 @@ RegisterNetEvent('f17_triathlon:client:forceCancel', function()
 end)
 
 RegisterCommand(Config.Command or 'triathlon', function()
-    TriggerServerEvent('f17_bamonphoihop:sv:StartSolo')
+    TriggerServerEvent('f17_bamonphoihop:sv:JoinLobby')
 end, false)
 
 RegisterCommand('triathlon_cancel', function()

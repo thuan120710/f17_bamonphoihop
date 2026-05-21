@@ -4,6 +4,17 @@ totalplayer = 0
 local labelMODS = ''
 local nguoidangchoi = {}
 local tablessavetop = {}
+local waitingPlayers = {}
+local waitingOrder = {}
+local lobbyOpen = false
+
+local function countTable(list)
+    local count = 0
+    for _ in pairs(list) do
+        count = count + 1
+    end
+    return count
+end
 
 RegisterServerEvent('f17_bamonphoihop:sv:setRoutingBucket', function(dimension)
     if Config.UseRoutingBucket == false then return end
@@ -209,6 +220,64 @@ local function startPlayers(data, labelMiniGame)
     end
 end
 
+local function startWaitingPlayers()
+    lobbyOpen = false
+
+    local players = {}
+    for _, src in ipairs(waitingOrder) do
+        if waitingPlayers[src] then
+            players[#players + 1] = src
+        end
+    end
+
+    waitingPlayers = {}
+    waitingOrder = {}
+
+    n = 0
+    totalplayer = 0
+    nguoidangchoi = {}
+    labelMODS = 'Ba mon phoi hop'
+    tablessavetop = {}
+
+    for _, src in ipairs(players) do
+        if QBCore.Functions.GetPlayer(src) then
+            totalplayer = totalplayer + 1
+            TriggerClientEvent('QBCore:Notify', src, 'BA MON PHOI HOP sap bat dau', 'primary', 5000)
+            TriggerClientEvent('f17_bamonphoihop:cl:StartGameBaMonPhoiHop', src, totalplayer)
+        end
+    end
+end
+
+RegisterServerEvent('f17_bamonphoihop:sv:JoinLobby', function()
+    local src = source
+
+    if waitingPlayers[src] then
+        TriggerClientEvent('QBCore:Notify', src, 'Ban da o trong phong cho Ba Mon Phoi Hop roi.', 'error', 3500)
+        return
+    end
+
+    waitingPlayers[src] = true
+    waitingOrder[#waitingOrder + 1] = src
+
+    local waitSeconds = Config.SharedRaceJoinSeconds or 30
+    TriggerClientEvent('QBCore:Notify', src, ('Da vao phong cho Ba Mon Phoi Hop. Tran dau bat dau sau %d giay.'):format(waitSeconds), 'success', 5000)
+
+    if lobbyOpen then
+        return
+    end
+
+    lobbyOpen = true
+    TriggerClientEvent('chat:addMessage', -1, {
+        color = { 80, 255, 145 },
+        multiline = true,
+        args = { 'F17 Ba Mon Phoi Hop', ('Phong cho da mo. Go /%s de tham gia trong %d giay.'):format(Config.Command or 'triathlon', waitSeconds) }
+    })
+
+    SetTimeout(waitSeconds * 1000, function()
+        startWaitingPlayers()
+    end)
+end)
+
 RegisterServerEvent('f17_bamonphoihop:sv:StartSolo', function()
     local src = source
     n = 0
@@ -235,6 +304,8 @@ exports('StartMiniGame', StartMiniGame)
 AddEventHandler('playerDropped', function()
     local src = source
     local playerKey = tonumber(src)
+    waitingPlayers[src] = nil
+
     if not nguoidangchoi[playerKey] then return end
 
     if GetResourceState('f17_daotrentroi') == 'started' then
