@@ -496,6 +496,7 @@ RegisterNetEvent('f17_bamonphoihop:cl:StartRaceGame', function(slot)
                 local playerCoords = GetEntityCoords(ped)
 
                 local waitingBikeMount = false
+                sleep = 1000
                 if currentPhase == 'bike' and not isInVehicle then
                     if currentVehicle and DoesEntityExist(currentVehicle) then
                         if IsPedInVehicle(ped, currentVehicle, false) then
@@ -524,7 +525,7 @@ RegisterNetEvent('f17_bamonphoihop:cl:StartRaceGame', function(slot)
 
                     local dist = #(playerCoords - vector3(target.x, target.y, target.z))
                     if dist < (Config.MarkerDrawDistance or 5000.0) then
-                        sleep = 5
+                        sleep = 0
                         local markerColor = isFinish and Config.MarkerColors.finish or Config.MarkerColors[currentPhase]
                         DrawMarker(4, target.x, target.y, target.z - 1, 0, 0, 0, 0, 0, 0, 15.0, 0.1, 300.0, markerColor[1], markerColor[2], markerColor[3], markerColor[4], false, true, 2, false, false, false, false)
 
