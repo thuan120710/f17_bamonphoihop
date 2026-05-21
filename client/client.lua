@@ -527,7 +527,15 @@ RegisterNetEvent('f17_bamonphoihop:cl:StartRaceGame', function(slot)
                     if dist < (Config.MarkerDrawDistance or 5000.0) then
                         sleep = 0
                         local markerColor = isFinish and Config.MarkerColors.finish or Config.MarkerColors[currentPhase]
-                        DrawMarker(4, target.x, target.y, target.z - 1, 0, 0, 0, 0, 0, 0, 15.0, 0.1, 300.0, markerColor[1], markerColor[2], markerColor[3], markerColor[4], false, true, 2, false, false, false, false)
+                        local markerHeight = 300.0
+                        local markerGap = 4.0
+                        local markerCount = 5
+                        local markerBaseZ = target.z - 1.0
+
+                        for markerIndex = 0, markerCount - 1 do
+                            local markerOffset = (2 - markerIndex) * markerGap
+                            DrawMarker(1, target.x, target.y + markerOffset, markerBaseZ, 0, 0, 0, 0, 0, 0, 2.5, 2.5, markerHeight, markerColor[1], markerColor[2], markerColor[3], markerColor[4], false, true, 2, false, false, false, false)
+                        end
 
                         if dist < (Config.MarkerReachDistance or 7.0) then
                             if currentPhase ~= 'bike' or (currentVehicle and IsPedInVehicle(ped, currentVehicle, false)) then
